@@ -2,9 +2,7 @@ const dotenv = require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const BotToken = process.env.BOT_TOKEN;
 const request = require('request');
-const {
-  BitlyClient
-} = require('bitly');
+const { BitlyClient } = require('bitly');
 const bitly = new BitlyClient(process.env.BITLY_KEY, {});
 const cron = require('node-cron');
 const getYoutubeSubtitles = require('@joegesualdo/get-youtube-subtitles-node');
@@ -12,6 +10,7 @@ const getVideoId = require('get-video-id');
 const bot = new TelegramBot(BotToken, {
   polling: true
 });
+const hk = require('@moondef/hacker-news-api');
 //
 
 // about
@@ -49,17 +48,17 @@ bot.onText(/\/help/, function (msg, match) {
 });
 
 // news
-bot.onText(/\/news/, function (msg, match) {
+bot.onText(/\/news (.+)/, function (msg, match) {
   const query = match[1];
   const chatId = `${msg.chat.id}&disable_web_page_preview=True`;
-  request(`https://newsapi.org/v2/top-headlines?country=in&apiKey=${process.env.NEWSAPI_KEY}`, function (error, response, body) {
+  request(`https://newsapi.org/v2/top-headlines?country=${query}&apiKey=${process.env.NEWSAPI_KEY}`, function (error, response, body) {
     if (!error && response.statusCode == 200) {
-      var el;
-      var ctr = 0;
-      var text = "";
-      var res = JSON.parse(body);
-      for (var i = 0; i < 10; i++) {
-        var obj = {}
+      let el;
+      let ctr = 0;
+      let text = "";
+      let res = JSON.parse(body);
+      for (let i = 0; i < 10; i++) {
+        let obj = {}
         text += `${i+1}. ${res.articles[i].title}\nRead more at: ${res.articles[i].url}\n\n`;
       }
       bot.sendMessage(chatId, text, {
@@ -71,12 +70,12 @@ bot.onText(/\/news/, function (msg, match) {
 
 // movie
 bot.onText(/\/movie (.+)/, function (msg, match) {
-  // var news= match[1];
-  var movie = match[1];
-  var chatId = msg.chat.id;
+  // let news= match[1];
+  let movie = match[1];
+  let chatId = msg.chat.id;
 
   request(`http://www.omdbapi.com/?apikey=${process.env.MOVIEDB_KEY}&t=${movie}`, function (err, res, body) {
-    var response = JSON.parse(body);
+    let response = JSON.parse(body);
     if (!err && res.statusCode == 200) {
       console.log(response);
       bot.sendMessage(chatId, `Movie 🎬 : ${response.Title}\nReleased on : ${response.Released}\nRuntime : ${(parseInt(response.Runtime)/60).toFixed(2)} hrs\nImdb Rating : ${response.imdbRating}/10\nRotten Tomatoes : ${response} `);
@@ -102,7 +101,7 @@ bot.onText(/\/shortlink (.+)/, async function (msg, match) {
 bot.onText(/\/dictionary (.+)/, function (msg, match) {
   const chatId = msg.chat.id;
   const term = match[1];
-  var options = {
+  let options = {
     method: 'GET',
     url: 'https://mashape-community-urban-dictionary.p.rapidapi.com/define',
     qs: {
@@ -132,16 +131,16 @@ bot.onText(/\/reminder/, function (msg, match) {
   bot.sendMessage(msg.chat.id, `Hello! ${msg.chat.first_name}, What do you want to be reminded of? [Start next message with /save]`)
     .then(res => {
       bot.onText(/\/save (.+)/, (message, match) => {
-        var reminder = match[1];
+        let reminder = match[1];
         if (reminder) {
           bot.sendMessage(message.chat.id, `Got it! What time? [example: /time (HH:MM:SS:AM|PM)]`)
             .then(() => {
               bot.onText(/\/time (.+)/, (message, match) => {
-                var inputTime = match[1];
+                let inputTime = match[1];
                 console.log(inputTime, reminder);
-                var task = cron.schedule('* * * * *', () => {
-                  var today = new Date();
-                  var time = (today.getHours() % 12) + ":" + today.getMinutes();
+                let task = cron.schedule('* * * * *', () => {
+                  let today = new Date();
+                  let time = (today.getHours() % 12) + ":" + today.getMinutes();
                   console.log(inputTime, time);
                   console.log(inputTime);
                   if (inputTime == time) {
@@ -203,4 +202,20 @@ bot.onText(/\/yttranscript (.+)/, function (msg, match) {
     .catch(err => {
       console.log('error is \n', err)
     });
+});
+
+//  HackerNews
+
+bot.onText(/\/hn/, async function(msg,match){
+  const chatId = msg.chat.id;
+  const popular = await hk.getNewStories(); // you will get IDs of popular news
+  //const newsItem = await hk.getItem(popular[0]);
+  let newsItem = '';
+  for(var i = 0;i<10;i++){
+    let ithNews = await hk.getItem(popular[i]);
+    newsItem += `Id: ${ithNews.id} , News: ${ithNews.title} , Url: ${ithNews.url}\n\n`;
+    console.log(ithNews);
+  }
+  console.log(newsItem);
+  bot.sendMessage(chatId,newsItem, { disable_web_page_preview: true });
 });

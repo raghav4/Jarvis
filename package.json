@@ -21,6 +21,7 @@
   "homepage": "https://github.com/raghav4/Jarvis#readme",
   "dependencies": {
     "@joegesualdo/get-youtube-subtitles-node": "^0.1.0",
+    "@moondef/hacker-news-api": "^2.0.6",
     "bitly": "^6.1.0",
     "dialogflow": "^0.10.3",
     "get-video-id": "^3.1.4",
